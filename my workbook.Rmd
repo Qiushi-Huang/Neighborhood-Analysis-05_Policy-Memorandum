@@ -1,0 +1,182 @@
+---
+title: "work process"
+author: "Huang"
+date: "11/29/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
+
+
+```{r cars}
+dir.create("data")
+dir.create("documentation")
+dir.create("output")
+dir.create("scripts")
+```
+
+## Load packages and get prapared
+
+```{r}
+library(tidyverse)
+library(tidycensus)
+census_api_key("a07c14d885909fe1ed618a13ac580736e89e13d9")
+```
+
+## download census data
+```{r}
+api_key <- "a07c14d885909fe1ed618a13ac580736e89e13d9"
+DL_Year <- 2019
+survey <- "acs5"
+geo <- "tract"
+state <- c("IL")
+source("1_Get_ACS.R")
+```
+## download the geographic data
+```{r}
+library(sf)
+library(tigris)
+il_trt<-tracts(state="IL", class="sf")
+ggplot()+geom_sf(data=il_trt)
+```
+
+##Prapare the join and they map the champaign county. there should be 33 tracts if "intersect" within the boundaries but I just deleted "010604" cause it's the edge and contains less population
+```{r}
+il_trt<-left_join(il_trt, acs_data, by="GEOID")
+champaign_county <- il_trt %>% filter( COUNTYFP %in% c("019") )
+chambana <- champaign_county %>% filter(TRACTCE %in% c("001301", "001205", "000302", "000301", "000402", "000401", "005702", "005701", "005800", "006000", "005500", "005600", "001206", "005402", "005401", "011100", "011000", "000700", "000800", "000901", "000902", "001203", "001204", "001000", "001201", "001302", "001400", "000200", "000500", "001100", "005300", "005900"))
+ggplot()+geom_sf(data = champaign_county)
+ggplot()+geom_sf(data = chambana)
+```
+
+## try to mapping race
+```{r}
+ggplot()+geom_sf(data = champaign_county, aes(fill= Pop))
+```
+## Try to get dissimilarity in each tract. the higher the number is, the more unevenly the population groups are distributed.
+```{r}
+co<- chambana %>% group_by(COUNTYFP) %>% summarise(
+  Pop_co = sum(Pop),
+  White_co = sum(White),
+  Black_co = sum(Black),
+  AIAN_co = sum(AIAN),
+  Asian_co = sum(Asian),
+  Latino_co = sum(Latino),
+  Nonwhite_co = sum(Nonwhite)
+)
+co
+#the following two rows are just in case of I need this map
+ggplot()+
+  geom_sf(data = chambana, aes(fill = Pop)) +
+  geom_sf(data = chambana,fill = NA)+
+  labs(chambana, title = "Population in the Chambana Region")+ theme_minimal()
+
+#then make the join and do the calculation
+chambana <- left_join(chambana, co%>% st_set_geometry(NULL), by = "COUNTYFP")
+options(scipen = 999)
+
+dissimilaritymap <- select(chambana, "GEOID","TRACTCE","STATEFP","COUNTYFP")
+
+chambana %>% st_set_geometry(NULL)%>% mutate(dissim_wb = abs(Black / Black_co - White / White_co)) %>% group_by(TRACTCE) %>% summarise(dissimilarity = 0.5*dissim_wb)
+dissimilaritymap <- chambana %>% mutate(dissim_wb = 0.5* abs(Black / Black_co - White / White_co))
+ggplot()+
+  geom_sf(data = dissimilaritymap, aes(fill = dissim_wb, color = dissim_wb)) +
+  geom_sf(data = dissimilaritymap,fill = NA)+
+    labs(title = "Black-White Dissimilarity Map of the Chambana Region")
+
+chambana %>% st_set_geometry(NULL)%>% mutate(dissim_wa = abs(Asian / Asian_co - White / White_co)) %>% group_by(TRACTCE) %>% summarise(dissimilarity = 0.5*sum(dissim_wa))
+dissimilaritymap <- chambana %>% mutate(dissim_wa = 0.5* abs(Asian / Asian_co - White / White_co))
+ggplot()+
+  geom_sf(data = dissimilaritymap, aes(fill = dissim_wa, color = dissim_wa)) +
+  geom_sf(data = dissimilaritymap,fill = NA)+
+    labs(title = "Asian-White Dissimilarity Map of the Chambana Region")
+
+
+chambana %>% st_set_geometry(NULL)%>% mutate(dissim_wl = abs(Latino / Latino_co - White / White_co)) %>% group_by(TRACTCE) %>% summarise(dissimilarity = 0.5*sum(dissim_wl))
+dissimilaritymap <- chambana %>% mutate(dissim_wl = 0.5* abs(Latino / Latino_co - White / White_co))
+ggplot()+
+  geom_sf(data = dissimilaritymap, aes(fill = dissim_wl, color = dissim_wl)) +
+  geom_sf(data = dissimilaritymap,fill = NA)+
+    labs(title = "Latino-White Dissimilarity Map of the Chambana Region")
+
+chambana %>% st_set_geometry(NULL)%>% mutate(dissim_wn = abs(Nonwhite / Nonwhite_co - White / White_co)) %>% group_by(TRACTCE) %>% summarise(dissimilarity = 0.5*sum(dissim_wn))
+dissimilaritymap <- chambana %>% mutate(dissim_wn = 0.5* abs(Latino / Latino_co - White / White_co))
+ggplot()+
+  geom_sf(data = dissimilaritymap, aes(fill = dissim_wn, color = dissim_wn)) +
+  geom_sf(data = dissimilaritymap,fill = NA)+
+    labs(title = "Nonwhite-White Dissimilarity Map of the Chambana Region")
+
+```
+**I can tell that overall Cham-bana has a good performance on minority population dissimilarity. The numbers here are all under 0.1. Among Black, Asian and Latino, black has a highest dissimilarity. After checked the Tract maps of Chambana I found the tracts with highest black-white dissimilarity have the most population and they are within the center of Chambana (or to say, campus). And for Nonwhite-White dissimilarity, tract 000200 and 000901 are the highest ones, which are in the north of the heart of Chambana. The tract 000700 is such an unsual one that it stands out of all its neighbors.**
+
+Then I try to get the interaction to measure the segregation. 
+
+```{r}
+chambana %>% st_set_geometry(NULL)%>% mutate(interaction_bw = (Black / Black_co * White / Pop)) %>% group_by(TRACTCE) %>% summarise(interaction = sum(interaction_bw, na.rm=TRUE))
+
+chambana %>% st_set_geometry(NULL) %>% mutate(interaction_wa = (Asian / Asian_co * White / Pop)) %>% group_by(TRACTCE) %>% summarise(interaction = sum(interaction_wa, na.rm=TRUE))
+
+chambana %>% st_set_geometry(NULL) %>% mutate(interaction_wl = (Latino / Latino_co * White / Pop)) %>% group_by(TRACTCE) %>% summarise(interaction = sum(interaction_wl, na.rm=TRUE))
+
+chambana %>% st_set_geometry(NULL)%>% mutate(interaction_wn = (Nonwhite / Nonwhite_co * Nonwhite / Pop)) %>% group_by(TRACTCE) %>% summarise(interaction = sum(interaction_wn, na.rm=TRUE))
+
+```
+**Overall they are all doing good. **
+
+# Income inequality
+*I keep the geography as county cause if I use tract here, I'll get the inc_ratio for every tract as 1. That' beacuse the tract is the smallest unit I'm working on and I hava to find a higher level administritive area as standard*
+ˆ
+```{r}
+B19013<-get_acs(geography = "tract", state = "IL", variables = B19013_Vars, survey = survey, year = DL_Year, output = "wide")
+B19013$MHHI_co<-B19013$B19013_001E
+B19013$MHHI_co[B19013$MHHI_co == "NaN"]<-NA 
+B19013<-B19013 %>% select(GEOID, MHHI_co)
+
+#Then I'm gonna calculate the income ratio.
+chambana <- left_join(chambana, B19013, by = "GEOID")
+chambana <- chambana %>% rename("MHHI_County" = MHHI_co.x)
+ chambana <- chambana %>%  mutate(MHHI_co = median(MHHI))
+
+chambana <- chambana %>% mutate(inc_ratio = MHHI/MHHI_co)
+#Here I use the average median income of all the 33 tracts with in Chambana to comapre.
+ggplot() +
+  geom_sf(data = chambana, aes(fill = inc_ratio), color = NA)+
+     labs(title = "Income Ratio for the Chambana Region", fill = "Income Ratio")+
+     theme_classic()
+```
+**So if the ratio is higher than 1, the the tract has a higher median income than the median level.  **
+
+**Now it's time to see if the race influnces the income.**
+
+```{r}
+ggplot()+
+  geom_point(data=chambana, aes(x=PWhite, y=inc_ratio)) +
+  geom_smooth(data=chambana, method = lm, aes(x=PWhite, y = inc_ratio))+
+  labs(title = "Ralationship between racial concentration and income", x = "Percent White", y = "Income Ratio")
+
+dissimilaritymap <- mutate(dissimilaritymap,-"inc_ratio")
+dissimilaritymap$inc_ratio <- chambana$inc_ratio
+  dissimilaritymap
+  
+ggplot()+
+  geom_point(data=dissimilaritymap, aes(x=PNonwhite, y=inc_ratio)) +
+  geom_smooth(data=dissimilaritymap, method = lm, aes(x=PNonwhite, y = inc_ratio))+
+  labs(title = "Ralationship between racial concentration and income", x = "Percent NonWhite", y = "Income Ratio")
+
+
+```
+#Next I'll see the relationship between age and income
+```{r}
+acs_age<-get_acs(geography = "tract", state = "IL", table = c("B01001"), year = 2019, survey = "acs5", output = "wide")
+acs_age %>% mutate(acs_age,
+  Age_student = B01001_008E+ B01001_009E+ B01001_010E+ B01001_011E+ B01001_032E+ B01001_033E+ B01001_034E+ B01001_035E)
+  %>% select(acs_age, GEOID)
+  
+```
+
