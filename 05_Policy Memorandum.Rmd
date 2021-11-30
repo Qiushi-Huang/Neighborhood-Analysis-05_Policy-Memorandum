@@ -1,0 +1,73 @@
+---
+output:
+  pdf_document:
+    citation_package: natbib
+    keep_tex: no
+    latex_engine: pdflatex
+    template: svm-latex-memo.tex
+  word_document: default
+fontfamily: mathpazo
+fontsize: 11pt
+geometry: margin=1in
+header-includes: \linespread{1.05}
+from: Qiushi Huang
+to: Dr. Andrew Greenlee
+subject: Memorandum Subject
+date: "Nonvember 30, 2021"
+memorandum: yes
+graphics: yes
+width: 0.3
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#Introduction
+
+In this memo I’m going to analyze the policy that influences the income status in Champaign and Urbana. In the previous memo I dig into Urbana’s data and have the following findings:
+1.	The overall poverty rate in Urbana is 29.8%, much higher than Champaign County level (19.9%), slightly higher than 25.0% in Champaign city. 
+2.	The majority race in Urbana is White, and the Black and the Asian are the second and third biggest races. Urbana has higher ratio of other races than the county.
+3.	The majority age group in Urbana is 20-25, while half of the poverty population are within the age range of 18-34. 
+4.	The educational attainment in Urbana is very different from the county level, for it has 34.8% population with a graduate or professional degree, almost three times of the county.  Additionally, this number of Champaign city is at the same level, but slightly lower than Urbana. 
+5.	The biggest employment sector in Urbana is educational services, taking more than half of the employees. 
+
+All the findings point out to the fact that Urbana is hugely influenced by, or to say, shaped, by the university. The majority age groups of students in UIUC are 20-29, match the age structure and poverty in age.  As for the educational attainment, graduate & professional students take 33% of the total students of UIUC in 2019, which is really close to the 34.8% graduated population of Urbana.
+
+![1- UIUC student age range](images/UIUC student age range.png)
+
+The university has a great impact on more aspects. In last memo I want to find the relationship between race and income. I create a bar chart the shows the income by race in Urbana, found that both black and Asian have only 1/6 or 1/7 of the Urbana median income. Things become different when it comes to the white. The white people below poverty are in the similar income level with other races, but for those above the poverty level they earn almost 4 times of the poverty white people. This can be seen as the evidence of race injustice but can’t tell the whole story ---- if I notice the gap between income of white above poverty and the median income in Urbana. The gap is so obvious to ignore that race isn’t the only reason for that, and perhaps it’s the education. 
+Afterall, I can see both race and education here shape the Urbana. In this memo I’m going to go further to see how much the race influences the income and so does the education in Champaign-Urbana, or to say, “Chambana” region. 
+
+# Get started 
+From census data I downloaded the ACS 5-y for both Champaign city and Urbana city. First I filter out all the census tracts within their boundaries. I did “select by location” in GIS to find which tracts are within the Chambana and got their tract id. Here’s the tract map of both cities. The boundaries of tracts are not perfectly within the cities’ but we can just use them as proximity. 
+
+## Figure 2 [ Tract maps of Chambana.png]
+
+The second step is to see where the population are concentrated. I got help from GIS to do the population density map and I can see that the center of Chambana has the highest population density, where is exactly the campus. 
+
+## Figure 3 [Population Density by Census tract-01.png]
+
+#Dissimilarity 
+Then as what I learned in the segregation workbook; I calculate the dissimilarity of each tract to see if the races are evenly distributed. After got the calculation results of the White, the Asian and the Black, I can tell that overall Chambana has a good performance on minority population dissimilarity. The numbers here are all under 0.1. Among Black, Asian, and Latino, black has a highest dissimilarity. After checked the Tract maps of Chambana I found the tracts with highest black-white dissimilarity have the most population and they are within the center of Chambana (or to say, campus). And for Nonwhite-White dissimilarity, tract 000200 and 000901 are the highest ones, which are in the north of the heart of Chambana. The tract 000700 is such an unusual one that it stands out of all its neighbors.
+
+## Figure 4 [ Nonwhite-White Dissimilarity Map of the Chambana Region.png]
+
+#Income inequality
+
+I found the median income of all the 33 tracts as the standard and calculated the income ratio. When the ratio is 1, this means this tract is in the middle of income level. When the ratio is above 1, then the tract has a higher income, and the number means how many times it is of the middle income.  The map shows that the heart of Chambana, where the campus locates, has the lowest income ratio, some tracts are even less than half of the middle level. And in the west wing, it has the highest income. Considering that the west is Champaign city and the east is Urbana, I can say that Champaign has a higher income level than Urbana. 
+
+## Figure 5 [ Income Ratio for the Chambana Region_median by 33tracts.png]
+
+#Relationships between race and income ratio
+
+I use the line chart in ggplot to show the relationship between percentage of white and the income ratio. The line just shows the correlation that the higher percentage of white the tract has, the higher income it has. And figure 7 just confirms this again by the negative correlation between the percentage of  nonwhite and income ratio.
+This is not surprise cause I’ve seen the income status among all the races.
+
+## Figure 6 [ Relationships between racial concentration and income.png]
+## Figure 7 [ Relationships between racial and income.png]
+
+#Conclusion
+From my analysis I can respond to what I came out in the introduction. First, the income status in Champaign – Urbana area is greatly impacted by race. This could be told from the Figure 6 & 7. Second, the income status is also impacted by the university. This could be told from the geographic information ---- where the campus located has the highest population density, and lowest income ratio. In conclusion, if I want to give suggestions on how to change the nowadays situation, I have to start from the university.
+
+
